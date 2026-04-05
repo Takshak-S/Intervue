@@ -1,17 +1,20 @@
-import { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext.jsx';
-import { getHistory, deleteHistoryItem } from '../../services/historyService.js';
-import InterviewCard from '../../components/InterviewCard';
+import { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext.jsx";
+import {
+  getHistory,
+  deleteHistoryItem,
+} from "../../services/historyService.js";
+import InterviewCard from "../../components/InterviewCard";
 import {
   BsChatSquareTextFill,
   BsCheckCircleFill,
   BsTrophyFill,
   BsPlayCircleFill,
   BsChatSquareText,
-} from 'react-icons/bs';
-import toast from 'react-hot-toast';
-import './index.css';
+} from "react-icons/bs";
+import toast from "react-hot-toast";
+import "./index.css";
 
 function HomePage() {
   const { user } = useContext(AuthContext);
@@ -20,16 +23,63 @@ function HomePage() {
   const [allInterviews, setAllInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  //
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const allData = await getHistory(1, 100);
+        setAllInterviews(allData.entries);
+        setRecentInterviews(allData.entries.slice(0, 3));
+      } catch (error) {
+        console.error("Failed to load history:", error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const completedCount = 0; //
-  const avgScore = 0; // 
+    loadHistory();
+  }, []);
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteHistoryItem(id);
+      setAllInterviews((prev) => {
+        const updated = prev.filter((item) => item._id !== id);
+        setRecentInterviews(updated.slice(0, 3));
+        return updated;
+      });
+      toast.success("Interview deleted");
+    } catch (error) {
+      toast.error("Failed to delete interview");
+    }
+  };
+
+  const handleCardClick = (interview) => {
+    if (interview.status === "completed") {
+      navigate(`/feedback/${interview._id}`);
+    } else {
+      navigate(`/interview/${interview._id}`);
+    }
+  };
+
+  const completedCount = allInterviews.filter(
+    (i) => i.status === "completed",
+  ).length;
+
+  const avgScore =
+    allInterviews.length > 0
+      ? Math.round(
+          allInterviews
+            .filter((i) => i.overallScore)
+            .reduce((sum, i) => sum + i.overallScore, 0) /
+            (allInterviews.filter((i) => i.overallScore).length || 1),
+        )
+      : 0;
 
   return (
     <div className="home-page">
       <div className="home-welcome">
         <h1 className="home-welcome-heading">
-          Welcome back, {user?.name?.split(' ')[0]}!
+          Welcome back, {user?.name?.split(" ")[0]}!
         </h1>
         <p className="home-welcome-subtitle">
           Practice makes perfect. Start a mock interview and get AI-powered
@@ -56,10 +106,7 @@ function HomePage() {
       </div>
 
       <div className="home-cta-container">
-        <button
-          className="home-start-btn"
-          onClick={() => navigate('/setup')}
-        >
+        <button className="home-start-btn" onClick={() => navigate("/setup")}>
           <BsPlayCircleFill className="home-start-icon" />
           Start New Interview
         </button>
@@ -71,7 +118,7 @@ function HomePage() {
           {recentInterviews.length > 0 && (
             <button
               className="home-view-all-btn"
-              onClick={() => navigate('/history')}
+              onClick={() => navigate("/history")}
             >
               View All
             </button>
@@ -94,7 +141,7 @@ function HomePage() {
             </p>
             <button
               className="home-empty-cta-btn"
-              onClick={() => navigate('/setup')}
+              onClick={() => navigate("/setup")}
             >
               <BsPlayCircleFill className="home-start-icon" />
               Start Interview

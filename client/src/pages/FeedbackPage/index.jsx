@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getInterview } from "../../services/interviewService.js";
-import ScoreCard from "../../components/ScoreCard";
+import ScoreCard from "../../components/Scorecard/index.jsx";
 import getScoreColor from "../../constants/scoreColors.js";
 import {
   BsCheckCircleFill,

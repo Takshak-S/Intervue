@@ -5,6 +5,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import InterviewSetupPage from "./pages/InterviewSetupPage";
 import InterviewPage from "./pages/InterviewPage";
+import FeedbackPage from "./pages/FeedbackPage";
+import HistoryPage from "./pages/HistoryPage";
 
 function App() {
   return (
@@ -36,6 +38,24 @@ function App() {
             <ProtectedRoute>
               <Navbar />
               <InterviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feedback/:id"
+          element={
+            <ProtectedRoute>
+              <Navbar />
+              <FeedbackPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <Navbar />
+              <HistoryPage />
             </ProtectedRoute>
           }
         />
