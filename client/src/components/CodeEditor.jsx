@@ -1,11 +1,10 @@
 import Editor from '@monaco-editor/react';
-import './index.css';
 
 function CodeEditor({ value, onChange, language, readOnly }) {
   return (
-    <div className="code-editor-wrapper">
+    <div className="h-full rounded-xl overflow-hidden border border-slate-200 shadow-sm transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10">
       <Editor
-        height="300px"
+        height="100%"
         language={language || 'javascript'}
         theme="light"
         value={value}
@@ -21,6 +20,11 @@ function CodeEditor({ value, onChange, language, readOnly }) {
           tabSize: 2,
           bracketPairColorization: { enabled: true },
           padding: { top: 12 },
+          lineNumbers: 'on',
+          glyphMargin: false,
+          folding: true,
+          lineDecorationsWidth: 10,
+          lineNumbersMinChars: 3,
         }}
       />
     </div>

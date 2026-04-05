@@ -5,7 +5,6 @@ import {
   BsRecordCircleFill,
   BsCheckCircleFill,
 } from "react-icons/bs";
-import "./index.css";
 
 const MAX_RECORD_TIME = 300;
 
@@ -136,57 +135,63 @@ function VoiceRecorder({ onRecordingComplete, disabled }) {
   };
 
   return (
-    <div className="voice-recorder">
+    <div className="w-full flex flex-col items-center gap-6 p-8 bg-white border border-slate-100 rounded-2xl shadow-sm max-w-xl mx-auto">
       {!isRecording && !recordedBlob && (
         <button
-          className={`vr-record-btn ${disabled ? "vr-record-btn-disabled" : ""}`}
+          className={`w-full py-4 bg-primary text-white font-sans text-sm font-bold rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all transform hover:scale-[1.02] active:scale-[0.98] ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={startRecording}
           disabled={disabled}
         >
-          <BsMicFill className="vr-btn-icon" />
-          Record Answer
+          <BsMicFill className="text-lg" />
+          START RECORDING
         </button>
       )}
 
       {isRecording && (
-        <div className="vr-recording-area">
-          <div className="vr-recording-status">
-            <BsRecordCircleFill className="vr-record-dot" />
-            <span className="vr-status-text">Recording...</span>
+        <div className="flex flex-col items-center gap-6 py-8 px-12 bg-red-50 border border-red-100 rounded-2xl w-full animate-in fade-in duration-300">
+          <div className="flex items-center gap-3">
+            <BsRecordCircleFill className="text-red-500 text-2xl animate-pulse" />
+            <span className="font-sans text-sm font-black text-red-600 uppercase tracking-widest pl-1">Recording</span>
           </div>
-          <span className="vr-timer">
-            {formatTime(recordingTime)} / {formatTime(MAX_RECORD_TIME)}
-          </span>
-          <button className="vr-stop-btn" onClick={stopRecording}>
+          <div className="flex flex-col items-center gap-1">
+            <span className="font-mono text-4xl font-black text-red-700 tracking-tighter">
+              {formatTime(recordingTime)}
+            </span>
+            <span className="font-sans text-[10px] font-black text-red-300 uppercase tracking-[0.2em]">
+              Limit: {formatTime(MAX_RECORD_TIME)}
+            </span>
+          </div>
+          <button className="px-10 py-3 bg-red-600 text-white font-sans text-sm font-black rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-200 uppercase tracking-widest" onClick={stopRecording}>
             Stop
           </button>
         </div>
       )}
 
       {!isRecording && recordedBlob && (
-        <div className="vr-preview">
-          <p className="vr-preview-label">
-            Review your recording before submitting:
-          </p>
-          <audio className="vr-audio-player" src={audioPreviewUrl} controls />
-          <p className="vr-preview-duration">
-            Duration: {formatTime(recordingTime)}
-          </p>
-          <div className="vr-preview-actions">
+        <div className="flex flex-col items-center gap-8 w-full animate-in fade-in zoom-in-95 duration-500">
+          <div className="w-full flex flex-col gap-4">
+            <p className="font-sans text-xs font-black text-slate-400 uppercase tracking-widest text-center">
+              Review your recording
+            </p>
+            <audio className="w-full h-12 accent-primary" src={audioPreviewUrl} controls />
+            <p className="font-sans text-[11px] font-bold text-slate-400 text-center uppercase tracking-widest">
+              Duration: <span className="text-slate-900">{formatTime(recordingTime)}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-4 w-full">
             <button
-              className={`vr-rerecord-btn ${disabled ? "vr-rerecord-btn-disabled" : ""}`}
+              className={`flex-1 py-4 bg-white text-slate-600 border border-slate-200 font-sans text-sm font-black rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all uppercase tracking-widest ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}
               onClick={handleReRecord}
               disabled={disabled}
             >
-              Re-record
+              Discard
             </button>
             <button
-              className={`vr-submit-btn ${disabled ? "vr-submit-btn-disabled" : ""}`}
+              className={`flex-1 py-4 bg-success text-white font-sans text-sm font-black rounded-xl shadow-lg shadow-success/20 hover:bg-success-dark transition-all transform hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}
               onClick={handleSubmit}
               disabled={disabled}
             >
-              <BsCheckCircleFill className="vr-btn-icon" />
-              Submit Answer
+              Submit
             </button>
           </div>
         </div>
