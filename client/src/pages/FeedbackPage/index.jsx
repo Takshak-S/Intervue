@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getInterview } from '../../services/interviewService.js';
-import ScoreCard from '../../components/ScoreCard';
-import getScoreColor from '../../constants/scoreColors.js';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { getInterview } from "../../services/interviewService.js";
+import ScoreCard from "../../components/ScoreCard";
+import getScoreColor from "../../constants/scoreColors.js";
 import {
   BsCheckCircleFill,
   BsArrowUpRight,
   BsJournalText,
   BsArrowRepeat,
-} from 'react-icons/bs';
-import toast from 'react-hot-toast';
-import './index.css';
+} from "react-icons/bs";
+import toast from "react-hot-toast";
+import "./index.css";
 
 function FeedbackPage() {
   const { id } = useParams();
@@ -19,7 +19,28 @@ function FeedbackPage() {
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // TODO: Add useEffect to load interview feedback using getInterview(id)
+  useEffect(() => {
+    const loadFeedback = async () => {
+      try {
+        const data = await getInterview(id);
+
+        if (!data.feedback) {
+          toast.error("No feedback available for this interview.");
+          navigate("/");
+          return;
+        }
+
+        setInterview(data);
+      } catch (error) {
+        toast.error("Failed to load feedback");
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeedback();
+  }, [id, navigate]);
 
   if (loading) {
     return (
@@ -43,11 +64,11 @@ function FeedbackPage() {
           <h1 className="feedback-heading">Interview Feedback</h1>
           <p className="feedback-role-text">{role}</p>
           <p className="feedback-date-text">
-            {new Date(interview.createdAt).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
+            {new Date(interview.createdAt).toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
             })}
           </p>
         </div>
@@ -150,14 +171,14 @@ function FeedbackPage() {
         <div className="feedback-actions-row">
           <button
             className="feedback-btn-primary"
-            onClick={() => navigate('/setup')}
+            onClick={() => navigate("/setup")}
           >
             <BsArrowRepeat className="feedback-btn-icon" />
             Retake Interview
           </button>
           <button
             className="feedback-btn-outline"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
           >
             Back to Dashboard
           </button>
