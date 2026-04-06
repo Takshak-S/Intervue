@@ -4,11 +4,13 @@ export const getHistory = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const status = req.query.status || "all";
 
     const result = await historyService.getUserHistory(
       req.user._id,
       page,
       limit,
+      status,
     );
     return res.json({ success: true, data: result });
   } catch (error) {

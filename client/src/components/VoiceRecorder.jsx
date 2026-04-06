@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import {
   BsMicFill,
-  BsRecordCircleFill,
+  BsStopFill,
+  BsTrashFill,
   BsCheckCircleFill,
+  BsArrowRightShort,
 } from "react-icons/bs";
 
 const MAX_RECORD_TIME = 300;
@@ -17,72 +19,45 @@ function VoiceRecorder({ onRecordingComplete, disabled }) {
 
   useEffect(() => {
     let timerId = null;
-
     if (isRecording) {
       timerId = setInterval(() => {
         setRecordingTime((prev) => {
           if (prev + 1 >= MAX_RECORD_TIME) {
             stopRecording();
-            toast.success("Maximum recording time reached (5 minutes).");
             return MAX_RECORD_TIME;
           }
           return prev + 1;
         });
       }, 1000);
     }
-
-    return () => {
-      if (timerId) {
-        clearInterval(timerId);
-      }
-    };
+    return () => clearInterval(timerId);
   }, [isRecording]);
 
   useEffect(() => {
     return () => {
       if (mediaRecorder && mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();
-        if (mediaRecorder.stream) {
-          mediaRecorder.stream.getTracks().forEach((track) => track.stop());
-        }
+        mediaRecorder.stream.getTracks().forEach((track) => track.stop());
       }
-      if (audioPreviewUrl) {
-        URL.revokeObjectURL(audioPreviewUrl);
-      }
+      if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
     };
   }, [mediaRecorder, audioPreviewUrl]);
 
   const startRecording = async () => {
     try {
-      if (audioPreviewUrl) {
-        URL.revokeObjectURL(audioPreviewUrl);
-      }
+      if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
       setRecordedBlob(null);
       setAudioPreviewUrl(null);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const options = { mimeType: "audio/webm;codecs=opus" };
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = "audio/webm";
-      }
-
-      const recorder = new MediaRecorder(stream, options);
+      const recorder = new MediaRecorder(stream);
       const chunks = [];
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-
+      recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: "audio/webm" });
-        setRecordedBlob(audioBlob);
-
-        const previewUrl = URL.createObjectURL(audioBlob);
-        setAudioPreviewUrl(previewUrl);
-
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        setRecordedBlob(blob);
+        setAudioPreviewUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -91,17 +66,12 @@ function VoiceRecorder({ onRecordingComplete, disabled }) {
       setIsRecording(true);
       setRecordingTime(0);
     } catch (error) {
-      console.error("Microphone access error:", error.message);
-      toast.error(
-        "Could not access microphone. Please allow microphone permissions.",
-      );
+      toast.error("Microphone access denied.");
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-    }
+    if (mediaRecorder?.state !== "inactive") mediaRecorder.stop();
     setIsRecording(false);
   };
 
@@ -109,93 +79,103 @@ function VoiceRecorder({ onRecordingComplete, disabled }) {
     if (recordedBlob) {
       onRecordingComplete(recordedBlob);
       setRecordedBlob(null);
-      if (audioPreviewUrl) {
-        URL.revokeObjectURL(audioPreviewUrl);
-        setAudioPreviewUrl(null);
-      }
-      setRecordingTime(0);
+      setAudioPreviewUrl(null);
     }
   };
 
-  const handleReRecord = () => {
-    if (audioPreviewUrl) {
-      URL.revokeObjectURL(audioPreviewUrl);
-    }
-    setRecordedBlob(null);
-    setAudioPreviewUrl(null);
-    setRecordingTime(0);
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className="w-full flex flex-col items-center gap-6 p-8 bg-white border border-slate-100 rounded-2xl shadow-sm max-w-xl mx-auto">
+    <div className="flex flex-col items-center gap-8 w-full">
       {!isRecording && !recordedBlob && (
-        <button
-          className={`w-full py-4 bg-primary text-white font-sans text-sm font-bold rounded-xl flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all transform hover:scale-[1.02] active:scale-[0.98] ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-          onClick={startRecording}
-          disabled={disabled}
-        >
-          <BsMicFill className="text-lg" />
-          START RECORDING
-        </button>
+        <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-500">
+          <button
+            onClick={startRecording}
+            disabled={disabled}
+            className={`w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center shadow-2xl shadow-primary/40 hover:scale-110 active:scale-95 transition-all outline-none ${disabled ? "opacity-30 cursor-not-allowed" : "hover:bg-primary-dark"}`}
+          >
+            <BsMicFill className="text-5xl" />
+          </button>
+          <span className="font-sans text-sm font-black text-primary uppercase tracking-[0.3em] animate-pulse">Start Recording</span>
+        </div>
       )}
 
       {isRecording && (
-        <div className="flex flex-col items-center gap-6 py-8 px-12 bg-red-50 border border-red-100 rounded-2xl w-full animate-in fade-in duration-300">
-          <div className="flex items-center gap-3">
-            <BsRecordCircleFill className="text-red-500 text-2xl animate-pulse" />
-            <span className="font-sans text-sm font-black text-red-600 uppercase tracking-widest pl-1">Recording</span>
+        <div className="flex flex-col items-center gap-10 w-full animate-in zoom-in-90 duration-300">
+          <div className="flex items-center gap-1 h-20 px-8 bg-white rounded-3xl border border-slate-200 shadow-sm transition-all">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1.5 bg-primary rounded-full animate-waveform"
+                style={{
+                  height: `${20 + Math.random() * 60}%`,
+                  animationDelay: `${i * 100}ms`,
+                  animationDuration: `${500 + Math.random() * 1000}ms`
+                }}
+              />
+            ))}
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="font-mono text-4xl font-black text-red-700 tracking-tighter">
+          
+          <div className="flex flex-col items-center">
+            <span className="font-mono text-5xl font-black text-slate-900 tracking-tighter">
               {formatTime(recordingTime)}
             </span>
-            <span className="font-sans text-[10px] font-black text-red-300 uppercase tracking-[0.2em]">
+            <span className="font-sans text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
               Limit: {formatTime(MAX_RECORD_TIME)}
             </span>
           </div>
-          <button className="px-10 py-3 bg-red-600 text-white font-sans text-sm font-black rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-200 uppercase tracking-widest" onClick={stopRecording}>
-            Stop
+
+          <button
+            onClick={stopRecording}
+            className="w-20 h-20 rounded-full bg-red-600 text-white flex items-center justify-center shadow-xl shadow-red-200 hover:bg-red-700 active:scale-95 transition-all"
+          >
+            <BsStopFill className="text-4xl" />
           </button>
         </div>
       )}
 
       {!isRecording && recordedBlob && (
-        <div className="flex flex-col items-center gap-8 w-full animate-in fade-in zoom-in-95 duration-500">
-          <div className="w-full flex flex-col gap-4">
-            <p className="font-sans text-xs font-black text-slate-400 uppercase tracking-widest text-center">
-              Review your recording
-            </p>
-            <audio className="w-full h-12 accent-primary" src={audioPreviewUrl} controls />
-            <p className="font-sans text-[11px] font-bold text-slate-400 text-center uppercase tracking-widest">
-              Duration: <span className="text-slate-900">{formatTime(recordingTime)}</span>
-            </p>
+        <div className="flex flex-col items-center gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="w-full bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="font-sans text-xs font-black text-slate-400 uppercase tracking-widest">Preview Answer</span>
+              <span className="font-mono text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">{formatTime(recordingTime)}</span>
+            </div>
+            <audio src={audioPreviewUrl} controls className="w-full h-10" />
           </div>
-          <div className="flex items-center gap-4 w-full">
+
+          <div className="flex items-center gap-4 w-full max-w-sm">
             <button
-              className={`flex-1 py-4 bg-white text-slate-600 border border-slate-200 font-sans text-sm font-black rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all uppercase tracking-widest ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}
-              onClick={handleReRecord}
-              disabled={disabled}
+              onClick={() => { setRecordedBlob(null); setAudioPreviewUrl(null); }}
+              className="flex-1 flex items-center justify-center gap-2 py-4 bg-white text-slate-500 border border-slate-200 font-sans text-sm font-bold rounded-2xl hover:bg-slate-50 transition-all"
             >
+              <BsTrashFill className="text-base" />
               Discard
             </button>
             <button
-              className={`flex-1 py-4 bg-success text-white font-sans text-sm font-black rounded-xl shadow-lg shadow-success/20 hover:bg-success-dark transition-all transform hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}
               onClick={handleSubmit}
-              disabled={disabled}
+              className="flex-1 flex items-center justify-center gap-2 py-4 bg-success text-white font-sans text-sm font-bold rounded-2xl shadow-lg shadow-success/20 hover:bg-success-dark transition-all transform active:scale-95"
             >
-              Submit
+              Submit Answer
+              <BsArrowRightShort className="text-2xl" />
             </button>
           </div>
         </div>
       )}
+      
+      <style>{`
+        @keyframes waveform {
+          0%, 100% { height: 20%; }
+          50% { height: 80%; }
+        }
+        .animate-waveform {
+          animation: waveform 0.8s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

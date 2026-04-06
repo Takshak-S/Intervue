@@ -1,16 +1,21 @@
 import Interview from "../models/Interview.model.js";
 
-export const getUserHistory = async (userId, page = 1, limit = 10) => {
+export const getUserHistory = async (userId, page = 1, limit = 10, status = null) => {
   const skip = (page - 1) * limit;
 
+  const query = { userId };
+  if (status && status !== "all") {
+    query.status = status;
+  }
+
   const [entries, totalEntries] = await Promise.all([
-    Interview.find({ userId })
+    Interview.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .select("role status overallScore totalQuestions createdAt"),
 
-    Interview.countDocuments({ userId }),
+    Interview.countDocuments(query),
   ]);
 
   return {

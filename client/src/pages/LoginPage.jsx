@@ -1,15 +1,17 @@
 import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { register, emailLogin } from "../services/authService.js";
 import {
   BsCameraVideo,
   BsMicFill,
-  BsFileEarmarkTextFill,
   BsCodeSlash,
   BsBarChartFill,
   BsShieldCheck,
-  BsPeopleFill,
+  BsArrowLeft,
+  BsArrowRightShort,
+  BsEye,
+  BsEyeSlash
 } from "react-icons/bs";
 import toast from "react-hot-toast";
 
@@ -18,6 +20,7 @@ function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { login } = useContext(AuthContext);
@@ -38,7 +41,7 @@ function LoginPage() {
       }
 
       login(result.token, result.user);
-      navigate("/");
+      navigate("/dashboard");
     } catch (error) {
       const message = error.response?.data?.message || "Something went wrong";
       toast.error(message);
@@ -48,85 +51,98 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
-      {/* Background decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-1/2 h-1/2 bg-primary/20 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-1/2 h-1/2 bg-blue-600/10 blur-[120px] rounded-full" />
+    <div className="min-h-screen bg-[#0a0f1e] flex flex-col md:flex-row overflow-hidden font-sans">
+      {/* Header (Top Left Logo) */}
+      <div className="absolute top-0 left-0 p-8 z-50">
+        <Link to="/" className="flex items-center gap-3 no-underline group">
+           <div className="w-10 h-10 bg-primary/20 flex items-center justify-center rounded-xl border border-primary/30">
+              <BsCameraVideo className="text-[20px] text-primary" />
+           </div>
+           <span className="font-serif text-2xl font-bold text-white tracking-tight">Intervue</span>
+        </Link>
       </div>
 
-      <nav className="px-10 py-8 flex items-center justify-between relative z-10 w-full max-w-7xl mx-auto">
-        <div className="flex items-center gap-2.5 text-white">
-          <div className="w-10 h-10 bg-primary/20 flex items-center justify-center rounded-xl border border-primary/30 backdrop-blur-md">
-            <BsCameraVideo className="text-xl text-primary" />
-          </div>
-          <span className="font-serif text-2xl font-bold tracking-tight">
-            Intervue
-          </span>
-        </div>
-      </nav>
+      {/* Header (Top Right Back Link) */}
+      <div className="absolute top-0 right-0 p-8 z-50 hidden md:block">
+        <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors font-bold text-sm uppercase tracking-widest no-underline">
+           <BsArrowLeft className="text-[20px]" />
+           Back to home
+        </Link>
+      </div>
 
-      <div className="relative px-6 py-24 md:py-32 flex flex-col items-center text-center gap-8 z-10">
-        <h1 className="font-serif text-5xl md:text-7xl text-white m-0 max-w-4xl tracking-tight leading-[1.1] animate-in fade-in slide-in-from-bottom-8 duration-700">
-          Ace Your Next{" "}
-          <span className="text-primary italic">Technical Interview</span>
-        </h1>
-        <p className="font-sans text-xl md:text-2xl text-slate-400 m-0 max-w-2xl leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-          Practice with an AI interviewer that speaks, listens, and gives you
-          real-time feedback on your performance.
-        </p>
+      {/* Left Side: Product Pitch */}
+      <div className="flex-1 relative hidden md:flex flex-col justify-center px-24 py-32 overflow-hidden border-r border-white/5 bg-[#0a0f1e]/50">
+         {/* Background decoration */}
+        <div className="absolute top-[-10%] left-[-10%] w-full h-full bg-primary/10 blur-[150px] rounded-full pointer-events-none" />
+        
+        <div className="relative z-10 max-w-xl">
+           <h2 className="font-serif text-5xl text-white mb-6 leading-tight tracking-tight">
+             Master your <span className="text-primary italic">dream job</span> interview today.
+           </h2>
+           <p className="font-sans text-xl text-slate-400 mb-12 leading-relaxed">
+             Join 10,000+ developers practicing with Natalie, our AI interviewer. Get real-time feedback and clear gaps.
+           </p>
 
-        <div className="flex flex-wrap justify-center gap-4 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          {[
-            { icon: BsMicFill, text: "Voice Conversations" },
-            { icon: BsFileEarmarkTextFill, text: "Resume Parser" },
-            { icon: BsCodeSlash, text: "IDE Environment" },
-            { icon: BsBarChartFill, text: "Scoring Engine" },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-2.5 px-6 py-3 bg-slate-800/40 border border-slate-700/50 rounded-full text-slate-300 backdrop-blur-xl hover:bg-slate-800/60 transition-colors"
-            >
-              <item.icon className="text-primary" />
-              <span className="font-sans text-sm font-bold tracking-wide uppercase">
-                {item.text}
-              </span>
-            </div>
-          ))}
+           <div className="space-y-8">
+              <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0 border border-primary/20">
+                    <BsMicFill className="text-[20px] text-primary" />
+                 </div>
+                 <div>
+                    <h4 className="font-serif text-xl text-white mb-1">Conversational AI</h4>
+                    <p className="font-sans text-sm text-slate-500">Practice voice-based technical rounds with realistic dialogue flow.</p>
+                 </div>
+              </div>
+              <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 bg-blue-600/10 rounded-xl flex items-center justify-center shrink-0 border border-blue-500/20">
+                    <BsCodeSlash className="text-[20px] text-blue-400" />
+                 </div>
+                 <div>
+                    <h4 className="font-serif text-xl text-white mb-1">Live code evaluation</h4>
+                    <p className="font-sans text-sm text-slate-500">Solve challenges in our built-in IDE with instant AI grading.</p>
+                 </div>
+              </div>
+              <div className="flex items-start gap-4">
+                 <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center shrink-0 border border-emerald-500/20">
+                    <BsBarChartFill className="text-[20px] text-emerald-400" />
+                 </div>
+                 <div>
+                    <h4 className="font-serif text-xl text-white mb-1">Detailed scoring</h4>
+                    <p className="font-sans text-sm text-slate-500">Get a score out of 100 with category-wise match performance.</p>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
 
-      <div className="flex flex-col items-center px-6 relative z-10 -mt-8 pb-32">
-        <div className="w-full max-w-md bg-white rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] p-10 md:p-12 border border-slate-100 flex flex-col gap-10 animate-in zoom-in-95 duration-1000 delay-300">
-          <div className="flex gap-2 p-1.5 bg-slate-50 rounded-2xl">
+      {/* Right Side: Auth Card */}
+      <div className="flex-1 flex flex-col items-center justify-center p-8 relative">
+        <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-[0_32px_80px_-16px_rgba(0,0,0,0.5)] pt-16 pb-12 px-10 md:px-12 flex flex-col gap-6 animate-in zoom-in-95 duration-500 relative z-10">
+          
+          <div className="flex p-1.5 bg-slate-50 rounded-2xl border border-slate-100 mb-2">
             <button
-              className={`flex-1 py-4 font-sans text-sm font-black rounded-xl transition-all duration-300 ${!isSignUp ? "bg-white text-primary shadow-sm ring-1 ring-slate-100" : "text-slate-400 hover:text-slate-600"}`}
+              className={`flex-1 py-3.5 font-sans text-sm font-black rounded-xl transition-all duration-300 ${!isSignUp ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]" : "text-slate-400 hover:text-slate-600"}`}
               onClick={() => setIsSignUp(false)}
             >
-              SIGN IN
+              Sign in
             </button>
             <button
-              className={`flex-1 py-4 font-sans text-sm font-black rounded-xl transition-all duration-300 ${isSignUp ? "bg-white text-primary shadow-sm ring-1 ring-slate-100" : "text-slate-400 hover:text-slate-600"}`}
+              className={`flex-1 py-3.5 font-sans text-sm font-black rounded-xl transition-all duration-300 ${isSignUp ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]" : "text-slate-400 hover:text-slate-600"}`}
               onClick={() => setIsSignUp(true)}
             >
-              JOIN FREE
+              Join free
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {isSignUp && (
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="name"
-                  className="font-sans text-xs font-black text-slate-400 uppercase tracking-widest pl-1"
-                >
-                  Full Name
-                </label>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="name" className="font-sans text-[13px] font-bold text-slate-500 px-1">Full name</label>
                 <input
                   id="name"
                   type="text"
-                  className="px-5 py-4 border-2 border-slate-50 bg-slate-50 rounded-2xl font-sans text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/20 focus:bg-white transition-all"
-                  placeholder="e.g. John Wick"
+                  className="px-5 py-3.5 bg-slate-50 border-none rounded-2xl font-sans text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-transparent focus:border-primary/20"
+                  placeholder="e.g. John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -134,77 +150,60 @@ function LoginPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="email"
-                className="font-sans text-xs font-black text-slate-400 uppercase tracking-widest pl-1"
-              >
-                Email Address
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className="font-sans text-[13px] font-bold text-slate-500 px-1">Email address</label>
               <input
                 id="email"
                 type="email"
-                className="px-5 py-4 border-2 border-slate-50 bg-slate-50 rounded-2xl font-sans text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/20 focus:bg-white transition-all"
-                placeholder="you@company.com"
+                className="px-5 py-3.5 bg-slate-50 border-none rounded-2xl font-sans text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-transparent focus:border-primary/20"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label
-                htmlFor="password"
-                className="font-sans text-xs font-black text-slate-400 uppercase tracking-widest pl-1"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                className="px-5 py-4 border-2 border-slate-50 bg-slate-50 rounded-2xl font-sans text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/20 focus:bg-white transition-all"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-              />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="password" className="font-sans text-[13px] font-bold text-slate-500 px-1">Password</label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full px-5 py-3.5 pr-12 bg-slate-50 border-none rounded-2xl font-sans text-[15px] text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-transparent focus:border-primary/20"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete={isSignUp ? "new-password" : "current-password"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary transition-colors"
+                >
+                  {showPassword ? <BsEyeSlash className="text-[18px]" /> : <BsEye className="text-[18px]" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
-              className={`w-full py-5 bg-primary text-white font-sans text-base font-black rounded-2xl shadow-2xl shadow-primary/40 hover:bg-primary-dark transition-all transform hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 disabled:cursor-wait`}
+              className="w-full mt-2 py-4.5 bg-primary text-white font-sans text-base font-black rounded-2xl shadow-3xl shadow-primary/30 hover:bg-primary-dark transition-all transform hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 disabled:cursor-wait flex items-center justify-center gap-2"
               disabled={loading}
             >
-              {loading
-                ? "PREPARING..."
-                : isSignUp
-                  ? "CREATE ACCOUNT"
-                  : "SIGN INTO APP"}
+              {loading ? "Processing..." : isSignUp ? "Create account" : "Sign into app"}
+              {!loading && <BsArrowRightShort className="text-[20px]" />}
             </button>
           </form>
         </div>
-
-        <div className="flex flex-wrap justify-center gap-12 mt-16 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-1000">
-          <div className="flex items-center gap-2.5 text-slate-400">
-            <BsShieldCheck className="text-2xl" />
-            <span className="font-sans text-[11px] font-black uppercase tracking-[0.2em]">
-              Secure Platform
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5 text-slate-400">
-            <BsPeopleFill className="text-2xl" />
-            <span className="font-sans text-[11px] font-black uppercase tracking-[0.2em]">
-              Join 10,000+ users
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5 text-slate-400">
-            <BsBarChartFill className="text-2xl" />
-            <span className="font-sans text-[11px] font-black uppercase tracking-[0.2em]">
-              Live Mentoring AI
-            </span>
-          </div>
+        
+        {/* Mobile footer links */}
+        <div className="mt-8 flex items-center gap-6 font-sans text-xs font-bold text-slate-500 md:hidden">
+           <Link to="/" className="hover:text-white no-underline transition-colors uppercase tracking-[0.2em]">Home</Link>
+           <span className="opacity-20">•</span>
+           <span className="uppercase tracking-[0.2em]">Contact</span>
+           <span className="opacity-20">•</span>
+           <span className="uppercase tracking-[0.2em]">Privacy</span>
         </div>
       </div>
     </div>

@@ -15,49 +15,53 @@ function Navbar() {
     navigate("/login");
   };
 
-  const activeLinkClass = "bg-blue-100 text-blue-700";
-  const inactiveLinkClass = "text-slate-200 hover:bg-slate-800";
+  const activeLinkClass = "bg-primary/20 text-primary border border-primary/20";
+  const inactiveLinkClass = "text-slate-400 hover:text-white hover:bg-white/5";
 
   return (
-    <nav className="flex items-center justify-between bg-slate-900 px-6 h-[60px] shadow-sm">
-      <div className="flex items-center gap-8">
-        <Link to="/" className="flex items-center gap-2 no-underline group">
-          <BsCameraVideo className="text-white text-2xl group-hover:text-primary transition-colors" />
-          <span className="font-serif text-lg text-white">
-            AI Mock Interview
-          </span>
+    <nav className="flex items-center justify-between bg-[#0a0f1e] px-8 h-20 border-b border-white/5 z-50">
+      <div className="flex items-center gap-12">
+        <Link to="/dashboard" className="flex items-center gap-3 no-underline group">
+           <div className="w-10 h-10 bg-primary/20 flex items-center justify-center rounded-xl border border-primary/30 group-hover:bg-primary/30 transition-all">
+              <BsCameraVideo className="text-[20px] text-primary" />
+           </div>
+           <span className="font-serif text-2xl font-bold text-white tracking-tight">
+             Intervue
+           </span>
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Link
-            to="/"
-            className={`flex items-center gap-1.5 no-underline font-sans text-sm px-3.5 py-2 rounded-md transition-colors ${location.pathname === "/" ? activeLinkClass : inactiveLinkClass}`}
+            to="/dashboard"
+            className={`flex items-center gap-2 no-underline font-sans text-sm font-bold px-4 py-2.5 rounded-xl transition-all ${location.pathname === "/dashboard" ? activeLinkClass : inactiveLinkClass}`}
           >
-            <MdDashboard className="text-lg" />
+            <MdDashboard className="text-[18px]" />
             Dashboard
           </Link>
           <Link
             to="/history"
-            className={`flex items-center gap-1.5 no-underline font-sans text-sm px-3.5 py-2 rounded-md transition-colors ${location.pathname === "/history" ? activeLinkClass : inactiveLinkClass}`}
+            className={`flex items-center gap-2 no-underline font-sans text-sm font-bold px-4 py-2.5 rounded-xl transition-all ${location.pathname === "/history" ? activeLinkClass : inactiveLinkClass}`}
           >
-            <MdHistory className="text-lg" />
+            <MdHistory className="text-[18px]" />
             History
           </Link>
         </div>
       </div>
       <div className="flex items-center">
         {user && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
-              <FaUser className="text-white text-xs" />
-              <span className="font-sans text-sm text-white font-medium">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 px-4 py-2 bg-white/5 rounded-2xl border border-white/10">
+              <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center border border-primary/30">
+                 <FaUser className="text-primary text-xs" />
+              </div>
+              <span className="font-sans text-sm text-slate-200 font-bold">
                 {user.name}
               </span>
             </div>
             <button
-              className="flex items-center gap-1 font-sans text-sm text-red-500 hover:text-red-400 px-2.5 py-1.5 rounded-md hover:bg-red-500/10 transition-colors"
+              className="flex items-center gap-2 font-sans text-sm font-bold text-red-500 hover:text-red-400 px-3 py-2 rounded-xl hover:bg-red-500/10 transition-all"
               onClick={handleLogout}
             >
-              <MdLogout className="text-base" />
+              <MdLogout className="text-[18px]" />
               Logout
             </button>
           </div>

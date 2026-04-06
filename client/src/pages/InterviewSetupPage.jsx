@@ -64,23 +64,23 @@ function InterviewSetupPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState("medium");
   const [resumeText, setResumeText] = useState("");
   const [resumeFileName, setResumeFileName] = useState("");
+  const [previousResume, setPreviousResume] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
 
   useEffect(() => {
-    const loadResume = async () => {
+    const checkPreviousResume = async () => {
       try {
         const data = await getResume();
         if (data) {
-          setResumeText(data.text);
-          setResumeFileName(data.fileName);
+          setPreviousResume(data);
         }
       } catch (error) {
         // No resume found - that's okay
       }
     };
 
-    loadResume();
+    checkPreviousResume();
   }, []);
 
   const handleResumeUpload = async (e) => {
@@ -143,6 +143,20 @@ function InterviewSetupPage() {
     }
   };
 
+  const handleUsePrevious = () => {
+    if (previousResume) {
+      setResumeText(previousResume.text);
+      setResumeFileName(previousResume.fileName);
+      toast.success("Previous resume loaded!");
+    }
+  };
+
+  const handleClearResume = () => {
+    setResumeText("");
+    setResumeFileName("");
+    toast.success("Resume cleared!");
+  };
+
   const handleNext = () => {
     if (step === 1 && !selectedRole) {
       toast.error("Please select a role.");
@@ -165,7 +179,7 @@ function InterviewSetupPage() {
           />
           <div className="flex flex-col gap-2">
             <h2 className="font-serif text-3xl text-slate-900 m-0">
-              Preparing Your Interview...
+              Preparing your interview...
             </h2>
             <p className="font-sans text-base text-slate-500 m-0">
               AI is analyzing your resume and generating personalized questions
@@ -176,19 +190,19 @@ function InterviewSetupPage() {
 
           <div className="flex flex-col gap-4 w-full max-w-sm">
             <div className="flex items-center gap-3">
-              <BsCheckCircleFill className="text-xl text-success" />
+              <BsCheckCircleFill className="text-[20px] text-success" />
               <span className="font-sans text-sm text-slate-900 font-medium">
                 Analyzing resume
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <BsCheckCircleFill className="text-xl text-success" />
+              <BsCheckCircleFill className="text-[20px] text-success" />
               <span className="font-sans text-sm text-slate-900 font-medium">
                 Generating questions
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <BsCheckCircleFill className="text-xl text-slate-200" />
+              <BsCheckCircleFill className="text-[20px] text-slate-200" />
               <span className="font-sans text-sm text-slate-400">
                 Setting up voice interviewer
               </span>
@@ -204,7 +218,7 @@ function InterviewSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-6">
+    <div className="min-h-full bg-slate-50 flex flex-col items-center py-12 px-6">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-8 border border-slate-200 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex items-center justify-between mb-10 border-b border-slate-100 pb-8 gap-4">
           <span
@@ -229,7 +243,7 @@ function InterviewSetupPage() {
         {step === 1 && (
           <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
             <h2 className="font-serif text-2xl text-slate-900 m-0 text-center">
-              Select Interview Role
+              Select interview role
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {INTERVIEW_ROLES.map((role) => {
@@ -262,7 +276,7 @@ function InterviewSetupPage() {
         {step === 2 && (
           <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
             <h2 className="font-serif text-2xl text-slate-900 m-0 text-center">
-              Choose Difficulty
+              Choose difficulty
             </h2>
             <div className="flex flex-col sm:flex-row gap-6 justify-center mt-4">
               {DIFFICULTY_LEVELS.map((level) => {
@@ -290,43 +304,73 @@ function InterviewSetupPage() {
         {step === 3 && (
           <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
             <h2 className="font-serif text-2xl text-slate-900 m-0 text-center">
-              Upload Your Resume
+              Upload your resume
             </h2>
-            <div className="flex flex-col items-center py-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl hover:bg-slate-100/50 transition-colors">
+            <div className="flex flex-col items-center py-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl hover:bg-slate-100/50 transition-colors w-full">
               {resumeText ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-lg shadow-sm border border-slate-200">
+                <div className="flex flex-col items-center gap-6">
+                  <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-200 animate-in fade-in zoom-in-95 duration-300">
                     <BsFileEarmarkArrowUp className="text-2xl text-primary" />
-                    <p className="font-sans text-sm font-medium text-slate-700 m-0">
+                    <p className="font-sans text-sm font-bold text-slate-700 m-0">
                       {resumeFileName}
                     </p>
                   </div>
-                  <label className="font-sans text-xs font-bold text-primary cursor-pointer hover:underline uppercase tracking-wider">
-                    Change Resume
+                  <div className="flex items-center gap-4">
+                    <label className="font-sans text-xs font-bold text-primary cursor-pointer hover:underline">
+                      Change resume
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleResumeUpload}
+                        hidden
+                      />
+                    </label>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                    <button 
+                      className="font-sans text-xs font-bold text-red-500 hover:text-red-700 hover:underline cursor-pointer"
+                      onClick={handleClearResume}
+                    >
+                      Clear selection
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-8 p-10 w-full animate-in fade-in duration-500">
+                  <label className="w-full flex flex-col items-center justify-center cursor-pointer gap-4 group">
+                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:border-primary/50 group-hover:shadow-md transition-all duration-300">
+                      <BsFileEarmarkArrowUp className="text-3xl text-slate-300 group-hover:text-primary transition-colors" />
+                    </div>
+                    <p className="font-sans text-sm font-bold text-slate-500 m-0 group-hover:text-slate-700 transition-colors">
+                      {uploadingResume
+                        ? "Uploading resume..."
+                        : "Click to upload your resume (PDF)"}
+                    </p>
                     <input
                       type="file"
                       accept=".pdf"
                       onChange={handleResumeUpload}
+                      disabled={uploadingResume}
                       hidden
                     />
                   </label>
+
+                  {previousResume && !uploadingResume && (
+                    <div className="flex flex-col items-center gap-3 pt-4 border-t border-slate-200/50 w-full max-w-sm">
+                      <span className="font-sans text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                        Or use your last one
+                      </span>
+                      <button
+                        onClick={handleUsePrevious}
+                        className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group w-full"
+                      >
+                        <BsFileEarmarkArrowUp className="text-lg text-slate-400 group-hover:text-primary" />
+                        <span className="font-sans text-sm font-bold text-slate-600 group-hover:text-slate-900 truncate flex-1 text-left">
+                          {previousResume.fileName}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer gap-3 p-10">
-                  <BsFileEarmarkArrowUp className="text-5xl text-slate-300 group-hover:text-primary transition-colors" />
-                  <p className="font-sans text-sm font-semibold text-slate-500 m-0">
-                    {uploadingResume
-                      ? "Uploading..."
-                      : "Click to upload PDF resume"}
-                  </p>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleResumeUpload}
-                    disabled={uploadingResume}
-                    hidden
-                  />
-                </label>
               )}
             </div>
           </div>

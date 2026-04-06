@@ -18,6 +18,10 @@ import {
   BsCheck,
   BsCheckCircleFill,
   BsXCircleFill,
+  BsMicFill,
+  BsChatLeftTextFill,
+  BsArrowRightShort,
+  BsClockFill,
 } from "react-icons/bs";
 import toast from "react-hot-toast";
 
@@ -34,11 +38,16 @@ function InterviewPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [ending, setEnding] = useState(false);
-
   const [interviewerState, setInterviewerState] = useState(STATE_SPEAKING);
 
-  const [showTextFallback, setShowTextFallback] = useState(false);
+  const [currentQuestionNum, setCurrentQuestionNum] = useState(1);
+  const [totalQuestions, setTotalQuestions] = useState(5);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [interviewerText, setInterviewerText] = useState("");
+  const [farewellMessage, setFarewellMessage] = useState("");
+
   const [textAnswer, setTextAnswer] = useState("");
+  const [selectedTab, setSelectedTab] = useState("voice");
 
   const [code, setCode] = useState("");
   const [codeLanguage, setCodeLanguage] = useState("javascript");
@@ -47,11 +56,14 @@ function InterviewPage() {
   const [currentAudio, setCurrentAudio] = useState(null);
   const [audioKey, setAudioKey] = useState(0);
 
-  const [currentQuestionNum, setCurrentQuestionNum] = useState(1);
-  const [totalQuestions, setTotalQuestions] = useState(5);
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [interviewerText, setInterviewerText] = useState("");
-  const [farewellMessage, setFarewellMessage] = useState("");
+  const [codeTimer, setCodeTimer] = useState(900); // 15 minutes
+
+  const isCodeQuestion = currentQuestion?.isCodeQuestion;
+  const progressPercent = (currentQuestionNum / totalQuestions) * 100;
+  const isSpeaking = interviewerState === STATE_SPEAKING;
+  const isThinking = interviewerState === STATE_THINKING;
+  const isListening = interviewerState === STATE_LISTENING;
+  const isFarewell = interviewerState === STATE_FAREWELL;
 
   useEffect(() => {
     const loadInterview = async () => {
@@ -65,15 +77,11 @@ function InterviewPage() {
           setCurrentQuestion(data.questions[qIndex] || data.questions[0]);
         }
 
-        const interviewerMsgs = data.messages.filter(
-          (m) => m.role === "interviewer",
-        );
+        const interviewerMsgs = data.messages.filter((m) => m.role === "interviewer");
         if (data.currentQuestion === 1 && interviewerMsgs.length >= 1) {
           setInterviewerText(interviewerMsgs[0].content);
         } else if (interviewerMsgs.length > 0) {
-          setInterviewerText(
-            interviewerMsgs[interviewerMsgs.length - 1].content,
-          );
+          setInterviewerText(interviewerMsgs[interviewerMsgs.length - 1].content);
         }
 
         if (data.currentQuestion === 1) {
@@ -96,27 +104,42 @@ function InterviewPage() {
       }
     };
     loadInterview();
-  }, [id, navigate, location.state]);
+  }, [id, navigate]);
+
+  useEffect(() => {
+    setSelectedTab("voice");
+    setTextAnswer("");
+    setCodeEvaluation(null);
+    setCode("");
+  }, [currentQuestionNum]);
+
+  useEffect(() => {
+    let timer;
+    if (isCodeQuestion && isListening) {
+      timer = setInterval(() => {
+        setCodeTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else {
+      setCodeTimer(900);
+    }
+    return () => clearInterval(timer);
+  }, [isCodeQuestion, isListening]);
+
+  const formatCodeTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
 
   const handleAudioEnded = () => {
     if (interviewerState === STATE_FAREWELL) return;
-    setTimeout(() => setInterviewerState(STATE_LISTENING), 3000);
-  };
-
-  const resetAnswerFields = () => {
-    setTextAnswer("");
-    setCode("");
-    setCodeEvaluation(null);
-    setShowTextFallback(false);
+    setTimeout(() => setInterviewerState(STATE_LISTENING), 1500);
   };
 
   const processAnswerResult = (result) => {
     if (result.isComplete) {
-      const farewellText =
-        "Thank you for completing the interview! I really enjoyed our conversation. Let me prepare your detailed feedback report...";
-      setFarewellMessage(farewellText);
+      setFarewellMessage("Thank you for completing the interview! I really enjoyed our conversation. Let me prepare your detailed feedback report...");
       setInterviewerState(STATE_FAREWELL);
-
       if (result.audio) {
         setTimeout(() => {
           setCurrentAudio(result.audio);
@@ -134,12 +157,8 @@ function InterviewPage() {
     setCurrentQuestion(result.question);
     setCurrentAudio(result.audio);
     setAudioKey((prev) => prev + 1);
-    resetAnswerFields();
-
     setInterviewerState(STATE_SPEAKING);
-    if (!result.audio) {
-      setTimeout(() => setInterviewerState(STATE_LISTENING), 3000);
-    }
+    if (!result.audio) setTimeout(() => setInterviewerState(STATE_LISTENING), 3000);
   };
 
   const submitAndProcess = async (answerText) => {
@@ -149,7 +168,7 @@ function InterviewPage() {
       const result = await submitTextAnswer(id, answerText);
       processAnswerResult(result);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to submit answer");
+      toast.error("Failed to submit answer");
       setInterviewerState(STATE_LISTENING);
     } finally {
       setSubmitting(false);
@@ -161,15 +180,11 @@ function InterviewPage() {
     setInterviewerState(STATE_THINKING);
     try {
       const data = await transcribeAudio(audioBlob);
-      const answerText =
-        data.text && !data.text.startsWith("[")
-          ? data.text
-          : "The candidate provided a verbal response.";
-
+      const answerText = data.text || "The candidate provided a verbal response.";
       const result = await submitTextAnswer(id, answerText);
       processAnswerResult(result);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to submit answer");
+      toast.error("Failed to submit answer");
       setInterviewerState(STATE_LISTENING);
     } finally {
       setSubmitting(false);
@@ -201,24 +216,12 @@ function InterviewPage() {
       const result = await submitCode(id, code, codeLanguage);
       setCodeEvaluation(result.evaluation);
       toast.success(`Code evaluated: ${result.evaluation.score}/100`);
-
       if (result.isComplete) {
-        setFarewellMessage(
-          "Thank you for completing the interview! I really enjoyed our conversation. Let me prepare your detailed feedback report...",
-        );
+        setFarewellMessage("Thank you for completing the interview! I really enjoyed our conversation...");
         setInterviewerState(STATE_FAREWELL);
-        if (result.audio) {
-          setTimeout(() => {
-            setCurrentAudio(result.audio);
-            setAudioKey((prev) => prev + 1);
-          }, 100);
-          setTimeout(() => handleEndInterview(), 10000);
-        } else {
-          setTimeout(() => handleEndInterview(), 4000);
-        }
+        setTimeout(() => handleEndInterview(), 5000);
         return;
       }
-
       setTimeout(() => processAnswerResult(result), 2500);
     } catch (error) {
       toast.error("Failed to evaluate code");
@@ -231,469 +234,173 @@ function InterviewPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-3">
-        <div
-          className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin"
-          role="status"
-        />
-        <p className="font-sans text-base text-slate-500 m-0">
-          Loading interview...
-        </p>
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+        <p className="font-sans text-base text-slate-500 m-0">Loading interview...</p>
       </div>
     );
   }
 
-  const isCodeQuestion = currentQuestion?.isCodeQuestion;
-  const progressPercent = (currentQuestionNum / totalQuestions) * 100;
-  const isSpeaking = interviewerState === STATE_SPEAKING;
-  const isThinking = interviewerState === STATE_THINKING;
-  const isListening = interviewerState === STATE_LISTENING;
-  const isFarewell = interviewerState === STATE_FAREWELL;
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] grid-rows-[60px_1fr_50px] md:grid-rows-[60px_1fr_50px] min-h-screen">
-      {/* Topbar */}
-      <div className="col-span-full flex items-center justify-between px-6 bg-white border-b border-slate-200 relative z-10">
-        <div className="flex items-center gap-4 flex-1">
-          <span className="font-sans text-sm font-semibold text-slate-900 whitespace-nowrap">
-            Question {currentQuestionNum} of {totalQuestions}
-          </span>
-          <div className="flex-1 max-w-[300px] h-2 bg-slate-200 rounded-full overflow-hidden hidden sm:block">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-        <div className="flex items-center">
-          {currentQuestionNum >= totalQuestions && isListening && (
-            <button
-              className={`font-sans text-sm font-semibold px-5 py-2 bg-red-600 text-white rounded-md cursor-pointer transition-all ${ending ? "opacity-50 cursor-not-allowed" : "hover:bg-red-700 active:scale-95"}`}
-              onClick={handleEndInterview}
-              disabled={ending}
-            >
-              {ending ? "Generating Feedback..." : "End Interview"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Left Panel - Interviewer */}
-      <div className="bg-slate-50 p-6 overflow-y-auto flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 md:w-20 h-16 md:h-20 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-lg relative">
-            <FaUserTie className="text-3xl text-white" />
-            <div
-              className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white ${isListening ? "bg-green-500 animate-pulse" : "bg-slate-300"}`}
-            />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-sans text-lg font-bold text-slate-900">
-              Natalie
-            </span>
-            <span className="font-sans text-sm text-slate-500">
-              AI Interviewer
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center min-h-[24px]">
-          {isSpeaking && (
-            <span className="font-sans text-sm font-bold text-primary animate-pulse">
-              Speaking...
-            </span>
-          )}
-          {isThinking && (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin" />
-              <span className="font-sans text-sm font-bold text-amber-600">
-                Thinking...
+    <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
+      <div className="w-full bg-white border-b border-slate-200 shadow-sm relative z-20">
+        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg">
+              <span className="font-sans text-sm font-bold text-slate-900 mr-2">
+                Step {currentQuestionNum} / {totalQuestions}
               </span>
+              {Array.from({ length: totalQuestions }, (_, i) => (
+                <div 
+                  key={i} 
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                    i + 1 === currentQuestionNum ? "w-4 bg-primary" : 
+                    i + 1 < currentQuestionNum ? "bg-emerald-500" : "bg-slate-300"
+                  }`} 
+                />
+              ))}
             </div>
-          )}
-          {isListening && (
-            <div className="flex items-center gap-2">
-              <BsRecordCircleFill className="text-sm text-green-600 animate-pulse" />
-              <span className="font-sans text-sm font-bold text-green-600">
-                Your turn to answer
-              </span>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="font-sans text-xs font-bold text-slate-400 uppercase tracking-widest">Progress</span>
+              <div className="w-48 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div className="h-full bg-primary transition-all duration-700" style={{ width: `${progressPercent}%` }} />
+              </div>
             </div>
-          )}
-        </div>
-
-        {currentAudio && (
-          <AudioPlayer
-            key={audioKey}
-            audioBase64={currentAudio}
-            autoPlay={true}
-            onEnded={handleAudioEnded}
-          />
-        )}
-
-        {isFarewell && (
-          <div className="flex flex-col gap-3 p-4 bg-white rounded-lg border border-slate-200 shadow-sm animate-in fade-in slide-in-from-bottom-2">
-            <p className="font-sans text-[15px] text-slate-700 leading-relaxed m-0">
-              {farewellMessage}
-            </p>
-            <div className="w-4 h-4 border-2 border-slate-200 border-t-primary rounded-full animate-spin" />
-          </div>
-        )}
-
-        {!isFarewell && !isThinking && interviewerText && (
-          <div className="flex flex-col gap-2">
-            <p className="font-sans text-[15px] text-slate-700 leading-relaxed m-0">
-              {interviewerText}
-            </p>
-            {isListening && currentAudio && (
-              <button
-                className="bg-none text-sm text-primary cursor-pointer text-left font-semibold hover:underline w-fit"
-                onClick={() => {
-                  setAudioKey((prev) => prev + 1);
-                  setInterviewerState(STATE_SPEAKING);
-                }}
-              >
-                Hear Again
-              </button>
+            {isCodeQuestion && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 rounded-lg border border-red-100 animate-pulse">
+                <BsClockFill className="text-xs" />
+                <span className="font-mono text-sm font-black">{formatCodeTime(codeTimer)}</span>
+              </div>
             )}
           </div>
-        )}
-
-        {!isFarewell && currentQuestion && !isThinking && (
-          <div className="border-l-4 border-primary bg-white p-5 rounded-r-lg shadow-sm flex flex-col gap-3 animate-in fade-in slide-in-from-left-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-sans text-[11px] font-bold text-white bg-primary px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Q{currentQuestionNum}
-              </span>
-              <span className="font-sans text-[11px] font-semibold text-primary bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                {currentQuestion.type}
-              </span>
-              {isCodeQuestion && (
-                <span className="flex items-center gap-1 font-sans text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  <BsCodeSlash className="text-xs" /> Code
-                </span>
-              )}
-            </div>
-            <p className="font-sans text-[16px] text-slate-900 leading-relaxed m-0 font-semibold">
-              {currentQuestion.text}
-            </p>
+          <div className="flex items-center gap-4">
+            {currentQuestionNum >= totalQuestions && isListening && (
+              <button
+                className={`font-sans text-sm font-bold px-6 py-2 bg-red-600 text-white rounded-xl shadow-lg shadow-red-200 transition-all ${ending ? "opacity-30" : "hover:bg-red-700 active:scale-95"}`}
+                onClick={handleEndInterview}
+                disabled={ending}
+              >
+                {ending ? "Finishing..." : "Complete interview"}
+              </button>
+            )}
+            <button className="font-sans text-xs font-bold text-slate-400 hover:text-red-500 transition-colors" onClick={() => navigate("/history")}>Exit</button>
           </div>
-        )}
+        </div>
+        <div className="absolute bottom-0 left-0 h-[2px] bg-primary transition-all duration-700" style={{ width: `${progressPercent}%` }} />
       </div>
 
-      {/* Right Panel - Answer Area */}
-      <div className="bg-white p-6 md:border-l border-slate-200 overflow-y-auto flex flex-col gap-6">
-        {isListening && (
-          <div className="animate-in fade-in duration-500">
-            {!isCodeQuestion && (
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start gap-4">
-                    <div>
-                      <h3 className="font-serif text-xl text-slate-900 m-0">
-                        Record Your Answer
-                      </h3>
-                      <p className="font-sans text-[13px] text-slate-500 mt-1">
-                        Click record, speak your answer clearly, then click
-                        submit to continue.
-                      </p>
-                    </div>
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <div className="flex-[2] bg-white md:bg-slate-50 border-r border-slate-200 flex flex-col overflow-y-auto">
+          <div className="p-8 flex flex-col gap-8 max-w-2xl mx-auto w-full">
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                  <FaUserTie className="text-3xl text-white" />
+                </div>
+                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white shadow-sm ${isListening ? "bg-green-500 animate-pulse" : isThinking ? "bg-amber-400 animate-bounce" : "bg-primary"}`} />
+              </div>
+              <div>
+                <h2 className="font-serif text-xl text-slate-900 m-0 leading-none">Natalie</h2>
+                <span className="font-sans text-[10px] font-black text-primary uppercase tracking-[0.2em] block mt-2">Ai interviewer</span>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className={`p-6 rounded-3xl border transition-all duration-500 ${isThinking ? "bg-amber-50 border-amber-100 shadow-sm" : "bg-white border-slate-200 shadow-sm"}`}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`font-sans text-[10px] font-black uppercase tracking-[0.2em] ${isThinking ? "text-amber-600" : isListening ? "text-green-600" : "text-primary"}`}>
+                    {isSpeaking ? "Natalie is speaking" : isThinking ? "Natalie is thinking" : "Listening for response"}
+                  </span>
+                </div>
+                {isFarewell ? (
+                  <p className="font-sans text-lg text-slate-700 m-0 italic">"{farewellMessage}"</p>
+                ) : interviewerText ? (
+                  <div className="flex flex-col gap-4">
+                    <p className="font-sans text-lg text-slate-800 m-0 font-medium tracking-tight whitespace-pre-wrap leading-relaxed">"{interviewerText}"</p>
+                    {isListening && currentAudio && (
+                      <button className="flex items-center gap-1.5 font-sans text-xs font-black text-primary hover:text-primary-dark transition-colors uppercase tracking-widest" onClick={() => setAudioKey(prev => prev + 1)}>
+                        <BsMicFill className="text-[16px]" /> Hear again
+                      </button>
+                    )}
                   </div>
-                  <div className="flex flex-col items-center gap-4 py-4 bg-slate-50 rounded-xl border border-slate-100">
+                ) : (
+                  <div className="flex gap-2">
+                    <div className="w-1.5 h-1.5 bg-slate-200 rounded-full animate-bounce" />
+                    <div className="w-1.5 h-1.5 bg-slate-200 rounded-full animate-bounce delay-100" />
+                    <div className="w-1.5 h-1.5 bg-slate-200 rounded-full animate-bounce delay-200" />
+                  </div>
+                )}
+              </div>
+
+              {!isFarewell && currentQuestion && (
+                <div className="bg-slate-900 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden">
+                  <div className="relative z-10 flex flex-col gap-5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-sans text-[11px] font-bold text-white bg-primary px-3 py-1 rounded-md">
+                        {isCodeQuestion ? "Technical assessment" : "Direct question"}
+                      </span>
+                      <span className="font-sans text-[11px] font-medium text-slate-400 border border-white/10 px-3 py-1 rounded-md">
+                        {currentQuestion.type}
+                      </span>
+                    </div>
+                    <p className="font-sans text-xl text-white leading-[1.7] m-0 font-normal tracking-tight">{currentQuestion.text}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          {currentAudio && <div className="hidden"><AudioPlayer key={audioKey} audioBase64={currentAudio} autoPlay={true} onEnded={handleAudioEnded} /></div>}
+        </div>
+
+        <div className="flex-[3] bg-white flex flex-col overflow-hidden shadow-2xl shadow-slate-200 relative z-10">
+          {!isCodeQuestion ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex p-4 border-b border-slate-100 bg-slate-50 gap-2">
+                <button onClick={() => setSelectedTab("voice")} className={`flex-1 flex items-center justify-center gap-3 py-3 font-sans text-sm font-bold rounded-2xl transition-all ${selectedTab === "voice" ? "bg-white text-primary shadow-sm border border-slate-200" : "text-slate-400 hover:bg-slate-100/50"}`}>
+                  <BsMicFill className="text-[16px]" /> Voice answer
+                </button>
+                <button onClick={() => setSelectedTab("text")} className={`flex-1 flex items-center justify-center gap-3 py-3 font-sans text-sm font-bold rounded-2xl transition-all ${selectedTab === "text" ? "bg-white text-primary shadow-sm border border-slate-200" : "text-slate-400 hover:bg-slate-100/50"}`}>
+                  <BsChatLeftTextFill className="text-[16px]" /> Type response
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-10 flex flex-col">
+                <div className="max-w-2xl mx-auto w-full h-full flex flex-col">
+                  <div className="mb-8">
+                    <h3 className="font-serif text-2xl text-slate-900 m-0">Your Response</h3>
+                    <p className="font-sans text-sm text-slate-400 mt-1 uppercase tracking-widest font-bold">Question {currentQuestionNum} of {totalQuestions}</p>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 p-8">
                     {!submitting ? (
-                      <VoiceRecorder
-                        onRecordingComplete={handleRecordingComplete}
-                        disabled={submitting}
-                      />
+                      selectedTab === "voice" ? (
+                        <VoiceRecorder onRecordingComplete={handleRecordingComplete} disabled={submitting || !isListening} />
+                      ) : (
+                        <div className="w-full h-full flex flex-col gap-6">
+                          <textarea className="flex-1 w-full p-8 font-sans text-lg text-slate-700 bg-white border border-slate-200 rounded-3xl outline-none transition-all resize-none shadow-sm focus:border-primary" placeholder="Start typing your response..." value={textAnswer} onChange={(e) => setTextAnswer(e.target.value)} disabled={!isListening} />
+                          <button className={`flex items-center justify-center gap-2 py-4 bg-primary text-white font-sans text-lg font-bold rounded-2xl shadow-xl shadow-primary/20 transition-all ${!textAnswer.trim() || !isListening ? "opacity-30" : "hover:bg-primary-dark active:scale-95"}`} onClick={handleSubmitText} disabled={!textAnswer.trim() || !isListening}>Submit answer <BsArrowRightShort className="text-xl" /></button>
+                        </div>
+                      )
                     ) : (
-                      <div className="flex flex-col items-center gap-3 p-5">
-                        <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
-                        <p className="font-sans text-sm text-slate-500 m-0">
-                          Processing your answer...
-                        </p>
+                      <div className="flex flex-col items-center gap-4 animate-in fade-in duration-500">
+                        <div className="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+                        <span className="font-sans text-sm font-black text-slate-400">Processing answer...</span>
                       </div>
                     )}
                   </div>
                 </div>
-
-                <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-                  <button
-                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 cursor-pointer font-sans text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-                    onClick={() => setShowTextFallback(!showTextFallback)}
-                  >
-                    <span className="flex items-center gap-2">
-                      <BsKeyboardFill className="text-base text-slate-500" />
-                      {showTextFallback
-                        ? "Hide text input"
-                        : "Prefer typing instead?"}
-                    </span>
-                    <span
-                      className={`text-[10px] text-slate-400 transition-transform duration-300 ${showTextFallback ? "rotate-180" : ""}`}
-                    >
-                      ▼
-                    </span>
-                  </button>
-                  {showTextFallback && (
-                    <div className="p-4 flex flex-col gap-3 bg-white border-t border-slate-200 animate-in slide-in-from-top-2 duration-300">
-                      <textarea
-                        className={`w-full p-4 font-sans text-[15px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
-                        placeholder="Type your answer here..."
-                        value={textAnswer}
-                        onChange={(e) => setTextAnswer(e.target.value)}
-                        rows={6}
-                        disabled={submitting}
-                      />
-                      <button
-                        className={`self-end font-sans text-sm font-semibold px-8 py-2.5 bg-primary text-white rounded-md transition-all ${submitting || !textAnswer.trim() ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700 hover:shadow-md active:scale-95"}`}
-                        onClick={handleSubmitText}
-                        disabled={submitting || !textAnswer.trim()}
-                      >
-                        {submitting ? "Submitting..." : "Submit Text Answer"}
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
-            )}
-
-            {isCodeQuestion && (
-              <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <h3 className="flex items-center gap-2 font-serif text-xl text-slate-900 m-0">
-                    <BsCodeSlash className="text-2xl text-primary" />
-                    {currentQuestion.codeType === "fix"
-                      ? "Fix the Code"
-                      : currentQuestion.codeType === "explain"
-                        ? "Explain the Code"
-                        : "Write Your Solution"}
-                  </h3>
-                  <select
-                    value={codeLanguage}
-                    onChange={(e) => setCodeLanguage(e.target.value)}
-                    className="font-sans text-[13px] px-3 py-1.5 border border-slate-200 rounded-md text-slate-700 bg-white hover:border-primary outline-none transition-colors"
-                  >
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                  </select>
-                </div>
-
-                {currentQuestion.codeSnippet && (
-                  <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-inner">
-                    <h4 className="font-sans text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                      {currentQuestion.codeType === "fix"
-                        ? "Buggy Code:"
-                        : "Code to Explain:"}
-                    </h4>
-                    <pre className="font-mono text-[14px] text-blue-100 m-0 whitespace-pre-wrap break-words leading-relaxed">
-                      {currentQuestion.codeSnippet}
-                    </pre>
-                  </div>
-                )}
-
-                {currentQuestion.codeType !== "explain" ? (
-                  <div className="flex flex-col gap-4">
-                    <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm h-[400px]">
-                      <CodeEditor
-                        value={
-                          code ||
-                          (currentQuestion.codeType === "fix"
-                            ? currentQuestion.codeSnippet || ""
-                            : "")
-                        }
-                        onChange={(val) => setCode(val || "")}
-                        language={currentQuestion.codeLanguage || codeLanguage}
-                      />
-                    </div>
-                    <button
-                      className={`self-end font-sans text-sm font-semibold px-8 py-3 bg-primary text-white rounded-md transition-all ${submitting || !code.trim() ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700 hover:shadow-lg active:scale-95"}`}
-                      onClick={handleSubmitCode}
-                      disabled={submitting || !code.trim()}
-                    >
-                      {submitting
-                        ? "Evaluating..."
-                        : currentQuestion.codeType === "fix"
-                          ? "Submit Fixed Code"
-                          : "Submit Solution"}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-6">
-                    <p className="font-sans text-sm text-slate-500 m-0 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                      Explain verbally what this code does, or type your
-                      explanation below.
-                    </p>
-
-                    <div className="flex flex-col items-center gap-4 py-6 bg-slate-50 rounded-xl border border-slate-100">
-                      {!submitting ? (
-                        <VoiceRecorder
-                          onRecordingComplete={async (audioBlob) => {
-                            setSubmitting(true);
-                            setInterviewerState(STATE_THINKING);
-                            try {
-                              const data = await transcribeAudio(audioBlob);
-                              const text =
-                                data.text || "Verbal explanation provided.";
-                              setCode(text);
-                              setTimeout(() => handleSubmitCode(), 100);
-                            } catch (error) {
-                              setCode("Verbal explanation provided.");
-                              setTimeout(() => handleSubmitCode(), 100);
-                            }
-                          }}
-                          disabled={submitting}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center gap-3 p-5">
-                          <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
-                          <p className="font-sans text-sm text-slate-500 m-0">
-                            Processing your explanation...
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-                      <button
-                        className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 cursor-pointer font-sans text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-                        onClick={() => setShowTextFallback(!showTextFallback)}
-                      >
-                        <span className="flex items-center gap-2">
-                          <BsKeyboardFill className="text-base text-slate-500" />
-                          {showTextFallback
-                            ? "Hide"
-                            : "Prefer typing your explanation?"}
-                        </span>
-                        <span
-                          className={`text-[10px] text-slate-400 transition-transform duration-300 ${showTextFallback ? "rotate-180" : ""}`}
-                        >
-                          ▼
-                        </span>
-                      </button>
-                      {showTextFallback && (
-                        <div className="p-4 flex flex-col gap-3 bg-white border-t border-slate-200 animate-in slide-in-from-top-2 duration-300">
-                          <textarea
-                            className={`w-full p-4 font-sans text-[15px] text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-primary focus:ring-2 focus:ring-blue-100 outline-none transition-all ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
-                            placeholder="Type your explanation... What does this code do?"
-                            value={code}
-                            onChange={(e) => setCode(e.target.value)}
-                            rows={5}
-                            disabled={submitting}
-                          />
-                          <button
-                            className={`self-end font-sans text-sm font-semibold px-8 py-2.5 bg-primary text-white rounded-md transition-all ${submitting || !code.trim() ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700 hover:shadow-md active:scale-95"}`}
-                            onClick={handleSubmitCode}
-                            disabled={submitting || !code.trim()}
-                          >
-                            {submitting
-                              ? "Submitting..."
-                              : "Submit Explanation"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {codeEvaluation && (
-                  <div
-                    className={`rounded-lg p-5 flex flex-col gap-3 shadow-md animate-in zoom-in-95 duration-300 ${codeEvaluation.isCorrect ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 font-sans text-base font-bold text-slate-900">
-                        {codeEvaluation.isCorrect ? (
-                          <>
-                            <BsCheckCircleFill className="text-xl text-green-600" />
-                            Correct
-                          </>
-                        ) : (
-                          <>
-                            <BsXCircleFill className="text-xl text-red-600" />
-                            Needs Improvement
-                          </>
-                        )}
-                      </span>
-                      <span className="font-sans text-sm font-bold bg-white px-3 py-1 rounded-full shadow-sm text-slate-700">
-                        Score: {codeEvaluation.score}/100
-                      </span>
-                    </div>
-                    <p className="font-sans text-sm text-slate-700 m-0 leading-relaxed">
-                      {codeEvaluation.feedback}
-                    </p>
-                    {codeEvaluation.suggestions && (
-                      <p className="font-sans text-[13px] text-slate-500 m-0 leading-relaxed pt-2 border-t border-slate-200/50">
-                        <strong className="text-slate-700">Tip:</strong>{" "}
-                        {codeEvaluation.suggestions}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {isSpeaking && (
-          <div className="flex flex-col items-center justify-center gap-4 p-10 px-5 flex-1 animate-in fade-in duration-700">
-            <div className="flex gap-1.5 h-12 items-center">
-              {[0.2, 0.5, 0.3, 0.8, 0.4].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-1.5 bg-primary/30 rounded-full animate-bounce"
-                  style={{
-                    height: `${h * 100}%`,
-                    animationDelay: `${i * 100}ms`,
-                  }}
-                />
-              ))}
             </div>
-            <p className="font-sans text-[15px] text-slate-500 m-0 text-center">
-              Natalie is speaking... please listen carefully
-            </p>
-          </div>
-        )}
-        {isThinking && (
-          <div className="flex flex-col items-center justify-center gap-4 p-10 px-5 flex-1 animate-in fade-in duration-700">
-            <div className="w-12 h-12 border-4 border-slate-100 border-t-amber-500 rounded-full animate-spin" />
-            <p className="font-sans text-[15px] text-slate-500 m-0 text-center">
-              Natalie is preparing the next question...
-            </p>
-          </div>
-        )}
-        {isFarewell && (
-          <div className="flex flex-col items-center justify-center gap-4 p-10 px-5 flex-1 animate-in fade-in duration-700">
-            <div className="w-12 h-12 border-4 border-slate-100 border-t-green-500 rounded-full animate-spin" />
-            <p className="font-sans text-[15px] text-slate-500 m-0 text-center">
-              Generating your feedback report...
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Timeline */}
-      <div className="col-span-full bg-white border-t border-slate-200 flex items-center justify-center px-6 relative z-10">
-        <div className="flex items-center gap-3">
-          {Array.from({ length: totalQuestions }, (_, i) => {
-            const qNum = i + 1;
-            const isAnswered = qNum < currentQuestionNum;
-            const isCurrent = qNum === currentQuestionNum;
-
-            let dotClass =
-              "w-8 h-8 rounded-full flex items-center justify-center font-sans text-[13px] font-semibold transition-all duration-300";
-            if (isAnswered)
-              dotClass +=
-                " bg-green-500 border-green-500 text-white shadow-sm scale-90";
-            else if (isCurrent)
-              dotClass +=
-                " bg-primary border-blue-700 text-white border-[3px] shadow-md scale-110";
-            else
-              dotClass += " bg-white border-2 border-slate-200 text-slate-400";
-
-            return (
-              <div key={i} className={dotClass}>
-                {isAnswered ? <BsCheck className="text-xl" /> : qNum}
-              </div>
-            );
-          })}
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden p-6 bg-slate-100">
+              <CodeEditor
+                value={code || (currentQuestion.codeSnippet || "")}
+                onChange={(val) => setCode(val || "")}
+                language={currentQuestion.codeLanguage || codeLanguage}
+                onLanguageChange={setCodeLanguage}
+                onSubmit={handleSubmitCode}
+                submitting={submitting}
+                evaluation={codeEvaluation}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -72,7 +72,7 @@ function HomePage() {
       : 0;
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto flex flex-col gap-8 bg-slate-50 min-h-[calc(100vh-60px)]">
+    <div className="p-6 md:p-10 max-w-7xl mx-auto flex flex-col gap-8 bg-slate-50 min-h-full">
       <div className="flex flex-col gap-2">
         <h1 className="font-serif text-3xl md:text-4xl text-slate-900 m-0">
           Welcome back, {user?.name?.split(" ")[0]}!
